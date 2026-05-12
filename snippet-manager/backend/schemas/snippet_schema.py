@@ -17,7 +17,7 @@ class SnippetUpdate(BaseModel):
 
 class SnippetRead(SnippetBase):
     id: int
-    created_at: str
+    created_at: datetime
     owner_id: int
 
     class Config:
