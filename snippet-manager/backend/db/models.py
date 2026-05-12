@@ -1,11 +1,16 @@
-from db.database import conn, cursor
+from sqlalchemy import Column, Integer, String, Text, DateTime
+from sqlalchemy.sql import func
+from db.database import Base, engine
 
-cursor.execute('''
-CREATE TABLE IF NOT EXISTS snippets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    code TEXT NOT NULL,
-    language TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
+class Snippet(Base):
+    __tablename__ = "snippets"
 
-conn.commit()
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, index=True, nullable=False)
+    code = Column(Text, nullable=False)
+    language = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+def init_db():
+    Base.metadata.create_all(bind=engine)
+

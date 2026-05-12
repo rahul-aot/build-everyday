@@ -1,21 +1,40 @@
+from sqlalchemy.orm import Session
+from db.models import Snippet
+from typing import Optional
 
+def create_snippet(db: Session, snippet_data: dict):
+    db_snippet = Snippet(**snippet_data)
+    db.add(db_snippet)
+    db.commit()
+    db.refresh(db_snippet)
+    return db_snippet.id
 
-from db.database import conn, cursor
-
-def create_snippet(data):
-    cursor.execute('''
-        INSERT INTO snippets (title, code, language)
-        VALUES (?, ?, ?)
-    ''', (data['title'], data['code'], data['language']))
-    conn.commit()
-
-def get_snippets(search=None):
+def get_snippets(db: Session, search: Optional[str] = None):
+    query = db.query(Snippet)
     if search:
-        cursor.execute("SELECT * FROM snippets WHERE title LIKE ?", (f"%{search}%",))
-    else:
-        cursor.execute("SELECT * FROM snippets")
-    return cursor.fetchall()
+        query = query.filter(Snippet.title.contains(search))
+    return query.all()
 
-def delete_snippet(snippet_id):
-    cusror.execute("DELETE FROM snippets WHERE id = ?", (snippet_id,))
-    conn.commit()
+def get_snippet_by_id(db: Session, snippet_id: int):
+    return db.query(Snippet).filter(Snippet.id == snippet_id).first()
+
+def update_snippet(db: Session, snippet_id: int, data: dict):
+    db_snippet = db.query(Snippet).filter(Snippet.id == snippet_id).first()
+    if not db_snippet:
+        return False
+    
+    for key, value in data.items():
+        setattr(db_snippet, key, value)
+    
+    db.commit()
+    return True
+
+def delete_snippet(db: Session, snippet_id: int):
+    db_snippet = db.query(Snippet).filter(Snippet.id == snippet_id).first()
+    if not db_snippet:
+        return False
+    
+    db.delete(db_snippet)
+    db.commit()
+    return True
+

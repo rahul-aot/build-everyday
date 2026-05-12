@@ -1,20 +1,40 @@
-from fastapi import APIRouter
-from schemas.snippet_schema import SnippetCreate
-from services.snippet_service import create_snippet, get_snippets, delete_snippet
+from fastapi import APIRouter, HTTPException, Query, status, Depends
+from sqlalchemy.orm import Session
+from typing import List, Optional
+from schemas.snippet_schema import SnippetCreate, SnippetRead, SnippetUpdate
+from services import snippet_service
+from db.database import get_db
 
 router = APIRouter(prefix="/snippets", tags=["snippets"])
 
-@router.post("/snippets")
-def add_snippet(snippet: SnippetCreate):
-    create_snippet(snippet)
-    return {"message": "Snippet created successfully"}
+@router.post("/", response_model=dict, status_code=status.HTTP_201_CREATED)
+def add_snippet(snippet: SnippetCreate, db: Session = Depends(get_db)):
+    snippet_id = snippet_service.create_snippet(db, snippet.model_dump())
+    return {"id": snippet_id, "message": "Snippet created successfully"}
 
-@router.get("/snippets")
-def list_snippets(search: str = None):
-    snippets = get_snippets(search)
-    return {"snippets": snippets}
+@router.get("/", response_model=List[SnippetRead])
+def list_snippets(search: Optional[str] = Query(None), db: Session = Depends(get_db)):
+    snippets = snippet_service.get_snippets(db, search)
+    return snippets
 
-@router.delete("/snippets/{snippet_id}")
-def remove_snippet(snippet_id: int):
-    delete_snippet(snippet_id)
+@router.get("/{snippet_id}", response_model=SnippetRead)
+def get_snippet(snippet_id: int, db: Session = Depends(get_db)):
+    snippet = snippet_service.get_snippet_by_id(db, snippet_id)
+    if not snippet:
+        raise HTTPException(status_code=404, detail="Snippet not found")
+    return snippet
+
+@router.put("/{snippet_id}")
+def update_snippet(snippet_id: int, snippet_update: SnippetUpdate, db: Session = Depends(get_db)):
+    success = snippet_service.update_snippet(db, snippet_id, snippet_update.model_dump(exclude_unset=True))
+    if not success:
+        raise HTTPException(status_code=404, detail="Snippet not found or no changes made")
+    return {"message": "Snippet updated successfully"}
+
+@router.delete("/{snippet_id}")
+def remove_snippet(snippet_id: int, db: Session = Depends(get_db)):
+    success = snippet_service.delete_snippet(db, snippet_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Snippet not found")
     return {"message": "Snippet deleted successfully"}
+
