@@ -1,3 +1,4 @@
+
 # 🎨 Snippet Manager Frontend
 
 A modern, responsive, and visually stunning React application featuring a custom glassmorphism design system.
